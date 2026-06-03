@@ -1,4 +1,7 @@
-from flask import Flask, render_template
+import re
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for
+from werkzeug.security import generate_password_hash
 from database.db import get_db, init_db, seed_db
 
 app = Flask(__name__)
@@ -13,8 +16,44 @@ def landing():
     return render_template("landing.html")
 
 
-@app.route("/register")
+@app.route("/register", methods=["GET", "POST"])
 def register():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        password = request.form.get("password", "")
+
+        error = None
+
+        if not name:
+            error = "Name is required."
+        elif len(name) > 255:
+            error = "Name must be 255 characters or less."
+        elif not email:
+            error = "Email is required."
+        elif not re.match(r"^[^@]+@[^@]+\.[^@]+$", email):
+            error = "Invalid email address."
+        elif not password:
+            error = "Password is required."
+        elif len(password) < 8:
+            error = "Password must be at least 8 characters."
+
+        if error is None:
+            db = get_db()
+            try:
+                db.execute(
+                    "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+                    (name, email, generate_password_hash(password))
+                )
+                db.commit()
+                db.close()
+                return redirect(url_for("login"))
+            except sqlite3.IntegrityError:
+                error = "Email already registered."
+                db.close()
+
+        return render_template("register.html", error=error)
+
     return render_template("register.html")
 
 
