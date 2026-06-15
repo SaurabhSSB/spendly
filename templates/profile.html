@@ -2,9 +2,36 @@
 
 {% block title %}Profile — Spendly{% endblock %}
 
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <h1>Profile</h1>
-    <p>Profile page — coming in Step 4</p>
-</div>
+<section class="profile-section">
+  <div class="profile-container">
+
+    <div class="profile-card">
+      <div class="profile-avatar">{{ user.name[0].upper() }}</div>
+      <h1 class="profile-name">{{ user.name }}</h1>
+      <p class="profile-email">{{ user.email }}</p>
+      <p class="profile-since">Member since {{ user.created_at[:7] }}</p>
+    </div>
+
+    <div class="profile-stats">
+      <div class="stat-tile">
+        <span class="stat-label">Expenses Logged</span>
+        <span class="stat-value">{{ summary.total_count }}</span>
+      </div>
+      <div class="stat-tile">
+        <span class="stat-label">Total Spent</span>
+        <span class="stat-value stat-amount">&#8377;{{ "%.2f"|format(summary.total_amount) }}</span>
+      </div>
+    </div>
+
+    <div class="profile-actions">
+      <a href="{{ url_for('logout') }}" class="profile-logout">Sign out</a>
+    </div>
+
+  </div>
+</section>
 {% endblock %}
