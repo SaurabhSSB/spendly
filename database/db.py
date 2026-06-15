@@ -79,3 +79,27 @@ def get_user_by_email(email):
     ).fetchone()
     db.close()
     return user
+
+
+def get_user_by_id(user_id):
+    db = get_db()
+    user = db.execute(
+        'SELECT id, name, email, created_at FROM users WHERE id = ?',
+        (user_id,)
+    ).fetchone()
+    db.close()
+    return user
+
+
+def get_expense_summary(user_id):
+    db = get_db()
+    row = db.execute(
+        'SELECT COUNT(*) AS total_count, COALESCE(SUM(amount), 0.0) AS total_amount '
+        'FROM expenses WHERE user_id = ?',
+        (user_id,)
+    ).fetchone()
+    db.close()
+    return {
+        'total_count': row['total_count'],
+        'total_amount': row['total_amount'],
+    }
