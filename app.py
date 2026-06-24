@@ -2,7 +2,14 @@ import re
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session, abort
 from werkzeug.security import generate_password_hash, check_password_hash
-from database.db import get_db, init_db, seed_db, get_user_by_email, get_user_by_id, get_expense_summary
+from database.db import (
+    get_db, init_db, seed_db,
+    get_user_by_email, get_user_by_id,
+    get_expense_summary,
+    get_expenses,           # B1
+    get_detailed_summary,   # B2
+    get_category_breakdown, # B3
+)
 
 app = Flask(__name__)
 app.secret_key = 'spendly-dev-secret-key'
@@ -120,6 +127,45 @@ def profile():
         abort(404)
     summary = get_expense_summary(session["user_id"])
     return render_template("profile.html", user=user, summary=summary)
+
+
+# ------------------------------------------------------------------ #
+# B1 — Transaction History                                            #
+# Subagent 1 writes here: GET /expenses                              #
+# ------------------------------------------------------------------ #
+
+@app.route("/expenses")
+def expenses():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    rows = get_expenses(session["user_id"])
+    return render_template("expenses.html", expenses=rows)
+
+
+# ------------------------------------------------------------------ #
+# B2 — Summary Stats                                                  #
+# Subagent 2 writes here: GET /expenses/summary                      #
+# ------------------------------------------------------------------ #
+
+@app.route("/expenses/summary")
+def expenses_summary():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    summary = get_detailed_summary(session["user_id"])
+    return render_template("summary.html", summary=summary)
+
+
+# ------------------------------------------------------------------ #
+# B3 — Category Breakdown                                             #
+# Subagent 3 writes here: GET /expenses/categories                   #
+# ------------------------------------------------------------------ #
+
+@app.route("/expenses/categories")
+def expenses_categories():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    breakdown = get_category_breakdown(session["user_id"])
+    return render_template("categories.html", breakdown=breakdown)
 
 
 @app.route("/expenses/add")
