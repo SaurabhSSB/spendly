@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Category Breakdown — Spendly{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/categories.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="categories-section">
+    <div class="categories-container">
+
+        <div class="categories-header">
+            <h1>Category Breakdown</h1>
+            <a href="{{ url_for('profile') }}" class="back-link">&larr; Back to Profile</a>
+        </div>
+
+        {% if breakdown %}
+        <table class="categories-table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Expenses</th>
+                    <th>Total Spent</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in breakdown %}
+                <tr>
+                    <td class="category-name">{{ row['category'] }}</td>
+                    <td>{{ row['count'] }}</td>
+                    <td class="category-total">&#8377;{{ "%.2f"|format(row['total']) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="categories-empty">
+            <p>No expenses recorded yet. Start tracking to see your category breakdown.</p>
+            <a href="{{ url_for('profile') }}" class="back-link">&larr; Back to Profile</a>
+        </div>
+        {% endif %}
+
+    </div>
+</section>
+{% endblock %}

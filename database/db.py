@@ -103,3 +103,51 @@ def get_expense_summary(user_id):
         'total_count': row['total_count'],
         'total_amount': row['total_amount'],
     }
+
+
+def get_expenses(user_id):
+    db = get_db()
+    rows = db.execute(
+        'SELECT id, amount, category, date, description, created_at '
+        'FROM expenses WHERE user_id = ? ORDER BY date DESC, id DESC',
+        (user_id,)
+    ).fetchall()
+    db.close()
+    return rows
+
+
+def get_detailed_summary(user_id):
+    db = get_db()
+    row = db.execute(
+        'SELECT COUNT(*) AS total_count, '
+        'COALESCE(SUM(amount), 0.0) AS total_amount, '
+        'COALESCE(AVG(amount), 0.0) AS avg_amount, '
+        'COALESCE(MAX(amount), 0.0) AS max_amount '
+        'FROM expenses WHERE user_id = ?',
+        (user_id,)
+    ).fetchone()
+    cat_row = db.execute(
+        'SELECT category FROM expenses WHERE user_id = ? '
+        'GROUP BY category ORDER BY SUM(amount) DESC LIMIT 1',
+        (user_id,)
+    ).fetchone()
+    db.close()
+    return {
+        'total_count': row['total_count'],
+        'total_amount': row['total_amount'],
+        'avg_amount': row['avg_amount'],
+        'max_amount': row['max_amount'],
+        'top_category': cat_row['category'] if cat_row else 'N/A',
+    }
+
+
+def get_category_breakdown(user_id):
+    db = get_db()
+    rows = db.execute(
+        'SELECT category, COUNT(*) AS count, SUM(amount) AS total '
+        'FROM expenses WHERE user_id = ? '
+        'GROUP BY category ORDER BY total DESC',
+        (user_id,)
+    ).fetchall()
+    db.close()
+    return rows

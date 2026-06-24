@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Summary Stats — Spendly{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/summary.css') }}">
+{% endblock %}
+
+{% block content %}
+<section class="summary-section">
+    <div class="summary-container">
+        <div class="summary-header">
+            <h1 class="summary-title">Expense Summary</h1>
+            <p class="summary-subtitle">A snapshot of your spending at a glance.</p>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <span class="summary-card-label">Total Expenses</span>
+                <span class="summary-card-value">{{ summary.total_count }}</span>
+            </div>
+
+            <div class="summary-card">
+                <span class="summary-card-label">Total Spent</span>
+                <span class="summary-card-value">&#8377;{{ "%.2f"|format(summary.total_amount) }}</span>
+            </div>
+
+            <div class="summary-card">
+                <span class="summary-card-label">Average Expense</span>
+                <span class="summary-card-value">&#8377;{{ "%.2f"|format(summary.avg_amount) }}</span>
+            </div>
+
+            <div class="summary-card">
+                <span class="summary-card-label">Largest Expense</span>
+                <span class="summary-card-value">&#8377;{{ "%.2f"|format(summary.max_amount) }}</span>
+            </div>
+
+            <div class="summary-card summary-card--full">
+                <span class="summary-card-label">Top Category</span>
+                <span class="summary-card-value">{{ summary.top_category }}</span>
+            </div>
+        </div>
+
+        <div class="summary-back">
+            <a href="{{ url_for('profile') }}" class="summary-back-link">&larr; Back to Profile</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
