@@ -4,12 +4,12 @@ from flask import Flask, render_template, request, redirect, url_for, session, a
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import (
     get_db, init_db, seed_db,
-    get_user_by_email, get_user_by_id,
-    get_expense_summary,
+    get_user_by_email,
     get_expenses,           # B1
     get_detailed_summary,   # B2
     get_category_breakdown, # B3
 )
+from database import queries
 
 app = Flask(__name__)
 app.secret_key = 'spendly-dev-secret-key'
@@ -122,11 +122,19 @@ def logout():
 def profile():
     if not session.get("user_id"):
         return redirect(url_for("login"))
-    user = get_user_by_id(session["user_id"])
+    user = queries.get_user_by_id(session["user_id"])
     if user is None:
         abort(404)
-    summary = get_expense_summary(session["user_id"])
-    return render_template("profile.html", user=user, summary=summary)
+    summary = queries.get_summary_stats(session["user_id"])
+    transactions = queries.get_recent_transactions(session["user_id"])
+    breakdown = queries.get_category_breakdown(session["user_id"])
+    return render_template(
+        "profile.html",
+        user=user,
+        summary=summary,
+        transactions=transactions,
+        breakdown=breakdown,
+    )
 
 
 # ------------------------------------------------------------------ #

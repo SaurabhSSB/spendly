@@ -95,8 +95,11 @@ pytest -s
 | `GET /` | Implemented — renders `landing.html` |
 | `GET /register` | Implemented — renders `register.html` |
 | `GET /login` | Implemented — renders `login.html` |
-| `GET /logout` | Stub — Step 3 |
-| `GET /profile` | Stub — Step 4 |
+| `GET /logout` | Implemented — clears session, redirects to `/` |
+| `GET /profile` | Implemented — renders `profile.html` with live user, summary, transaction, and category data |
+| `GET /expenses` | Implemented — renders `expenses.html` with the user's transaction history |
+| `GET /expenses/summary` | Implemented — renders `summary.html` with detailed spend stats |
+| `GET /expenses/categories` | Implemented — renders `categories.html` with category breakdown |
 | `GET /expenses/add` | Stub — Step 7 |
 | `GET /expenses/<id>/edit` | Stub — Step 8 |
 | `GET /expenses/<id>/delete` | Stub — Step 9 |
