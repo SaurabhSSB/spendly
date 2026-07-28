@@ -1,65 +1,104 @@
-# Spec: Backend Route for Profile Page
+# Spec: Backend Connection
 
 ## Overview
-This step adds pytest test coverage for the `GET /profile` backend route and its two supporting database helpers (`get_user_by_id`, `get_expense_summary`). The route and helpers were wired up during Step 04's implementation but have no automated tests. This step creates a `tests/test_profile.py` suite that verifies authentication guards, correct data passing to the template, 404 handling on a missing user record, and accurate expense aggregation — giving the team confidence that the profile backend is correct before expense features build on top of it.
+Step 5 replaces all hardcoded data in the `/profile` route with live queries
+against the SQLite database. The profile page currently renders a static demo
+user, fixed summary stats, a hand-typed transaction list, and a hardcoded
+category breakdown. This step wires those four sections to real data so that
+every logged-in user sees their own expenses. Three parallel subagents handle
+the three independent data concerns — transaction history, summary stats, and
+category breakdown — before being integrated into the single `/profile` route.
 
 ## Depends on
-- Step 01 — Database Setup (`users` and `expenses` tables must exist; `get_db()` must work)
-- Step 02 — Registration (user records must be insertable)
-- Step 03 — Login and Logout (session must store `user_id`)
-- Step 04 — Profile Page Design (`profile.html` must exist; route and DB helpers must be implemented)
+- Step 1: Database setup (tables and `get_db()` exist)
+- Step 2: Registration (users are stored in the database)
+- Step 3: Login / Logout (`session["user_id"]` is set on login)
+- Step 4: Profile page static UI (template already renders all four sections)
 
 ## Routes
-No new routes. The existing `GET /profile` route is what this step tests.
+No new routes. The existing `GET /profile` route is modified.
 
 ## Database changes
-No new tables, columns, or helpers. Uses existing `get_user_by_id(user_id)` and `get_expense_summary(user_id)` from `database/db.py`.
+No database changes. The `users` and `expenses` tables already have all
+required columns (`user_id`, `amount`, `category`, `date`, `description`,
+`created_at`).
 
 ## Templates
-No changes.
+- **Modify**: `templates/profile.html`
+  - Amounts must be rendered with the ₹ symbol (Indian Rupee).
+  - All four dynamic sections (user info, summary stats, transaction list,
+    category breakdown) are already present — no structural changes needed,
+    only the Jinja variables they consume are now real.
 
 ## Files to change
-- None (implementation is complete from Step 04)
+- `app.py` — replace hardcoded data in the `profile()` view with DB queries
+- `templates/profile.html` — confirm ₹ symbol is used for all currency display
 
 ## Files to create
-- `tests/test_profile.py` — pytest test suite for the profile backend route
+- `database/queries.py` — pure query helpers (no Flask imports), one function
+  per data concern:
+  - `get_user_by_id(user_id)` → dict with `name`, `email`, `member_since`
+  - `get_summary_stats(user_id)` → dict with `total_spent`, `transaction_count`, `top_category`
+  - `get_recent_transactions(user_id, limit=10)` → list of dicts, each with `date`, `description`, `category`, `amount`
+  - `get_category_breakdown(user_id)` → list of dicts, each with `name`, `amount`, `pct` (percentage of total, rounded to nearest int)
 
 ## New dependencies
-No new dependencies. Uses `pytest` (already in `requirements.txt`).
+No new dependencies.
 
 ## Rules for implementation
-- No SQLAlchemy or ORMs — use raw SQLite via `get_db()` in test fixtures
-- Parameterized queries only — `?` placeholders, never f-strings in SQL
-- Tests must use Flask's `app.test_client()` and an in-memory or temporary SQLite database — never touch the production `spendly.db`
-- Override `app.config["DATABASE"]` or patch `DB_PATH` in `database/db.py` so tests use a temp file (e.g. `tmp_path / "test.db"`)
-- Each test must set up its own isolated DB state via a fixture — no shared mutable state between tests
-- All templates extend `base.html` — tests should check `200` status and key content strings, not full HTML equality
-- Use `url_for()` awareness: tests should hit `/profile` directly by path, not by constructing URLs manually
+- No SQLAlchemy or ORMs — raw `sqlite3` only via `get_db()`
+- Parameterised queries only — never string-format values into SQL
+- Foreign keys PRAGMA must be enabled on every connection (already done in `get_db()`)
+- Use CSS variables — never hardcode hex values
+- All templates extend `base.html`
+- No inline styles
+- Currency must always display as ₹ — never £ or $
+- `member_since` must be derived from `users.created_at` and formatted as
+  "Month YYYY" (e.g. "January 2026")
+- `pct` values in category breakdown must sum to 100; use integer rounding and
+  adjust the largest category to absorb any rounding remainder
+- If a user has no expenses, summary stats should return zeros and empty lists
+  rather than raising exceptions
+- Query helpers in `database/queries.py` must call `get_db()` internally and
+  close the connection before returning
 
-## Test cases to cover
+## Tests to write
 
-### Authentication guard
-- `GET /profile` with no session → `302` redirect to `/login`
-- `GET /profile` with a valid `user_id` in session → `200`
+### Unit tests
+File: `tests/test_backend_connection.py`
 
-### Data rendering
-- Response body contains the logged-in user's name
-- Response body contains the logged-in user's email
-- Response body contains a formatted member-since date (year is present at minimum)
-- Response body contains the correct expense count for that user
-- Response body contains the correct total amount for that user
+| Function | Input | Expected output |
+|---|---|---|
+| `get_user_by_id` | valid `user_id` | dict with correct `name`, `email`, `member_since` |
+| `get_user_by_id` | non-existent id | `None` |
+| `get_summary_stats` | `user_id` with expenses | correct `total_spent`, `transaction_count`, `top_category` |
+| `get_summary_stats` | `user_id` with no expenses | `{"total_spent": 0, "transaction_count": 0, "top_category": "—"}` |
+| `get_recent_transactions` | `user_id` with expenses | list ordered newest-first, each item has `date`, `description`, `category`, `amount` |
+| `get_recent_transactions` | `user_id` with no expenses | empty list |
+| `get_category_breakdown` | `user_id` with expenses | list ordered by `amount` desc; `pct` values are integers summing to 100 |
+| `get_category_breakdown` | `user_id` with no expenses | empty list |
 
-### Edge cases
-- User with zero expenses → count shows `0`, amount shows `0`
-- `user_id` in session that does not exist in `users` table → `404`
+### Route tests
+`GET /profile` — unauthenticated:
+- Redirects to `/login` (302)
+
+`GET /profile` — authenticated as seed user:
+- Returns 200
+- Response contains the seed user's name ("Demo User")
+- Response contains the seed user's email ("demo@spendly.com")
+- Response contains ₹ symbol
+- `total_spent` matches sum of all seed expenses (346.24)
+- `transaction_count` is 8
+- `top_category` is "Bills" (highest single-category total)
+- Transaction list appears in newest-first order
+- Category breakdown contains all 7 categories
 
 ## Definition of done
-- [ ] `pytest tests/test_profile.py` passes with no errors or failures
-- [ ] Unauthenticated request to `/profile` returns a 302 redirect to `/login`
-- [ ] Authenticated request to `/profile` returns 200
-- [ ] Response contains the user's name and email
-- [ ] Response contains the correct expense count and total amount
-- [ ] A user with no expenses shows count `0` and amount `0`
-- [ ] A session referencing a non-existent user ID returns 404
-- [ ] Tests use a temporary database — production `spendly.db` is not touched
-- [ ] `pytest` (full suite) passes with no regressions
+- [ ] Logging in as the seed user (demo@spendly.com / demo123) shows "Demo User" and "demo@spendly.com" on the profile page — not the hardcoded strings
+- [ ] Total spent displayed on the profile page equals ₹346.24
+- [ ] Transaction count displayed is 8
+- [ ] Top category displayed is "Bills"
+- [ ] Transaction list shows 8 rows ordered newest date first
+- [ ] Category breakdown shows 7 categories with percentages that add up to 100 %
+- [ ] All amounts on the page display the ₹ symbol
+- [ ] Registering a brand-new user and visiting `/profile` shows ₹0.00 total spent, 0 transactions, and an empty category breakdown — no errors
