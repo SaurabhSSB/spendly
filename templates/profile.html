@@ -17,6 +17,24 @@
       <p class="profile-since">Member since {{ user.member_since }}</p>
     </div>
 
+    <div class="filter-bar">
+      <div class="filter-presets">
+        <a href="{{ url_for('profile', date_from=this_month_start, date_to=this_month_end) }}"
+           class="filter-preset{{ ' active' if active_preset == 'this_month' else '' }}">This Month</a>
+        <a href="{{ url_for('profile', date_from=last_3_start, date_to=today) }}"
+           class="filter-preset{{ ' active' if active_preset == 'last_3_months' else '' }}">Last 3 Months</a>
+        <a href="{{ url_for('profile', date_from=last_6_start, date_to=today) }}"
+           class="filter-preset{{ ' active' if active_preset == 'last_6_months' else '' }}">Last 6 Months</a>
+        <a href="{{ url_for('profile') }}"
+           class="filter-preset{{ ' active' if active_preset == 'all_time' else '' }}">All Time</a>
+      </div>
+      <form method="get" action="{{ url_for('profile') }}" class="filter-custom-form">
+        <input type="date" name="date_from" class="filter-input" value="{{ filter_from or '' }}">
+        <input type="date" name="date_to" class="filter-input" value="{{ filter_to or '' }}">
+        <button type="submit" class="filter-apply-btn{{ ' active' if active_preset == 'custom' else '' }}">Apply</button>
+      </form>
+    </div>
+
     <div class="profile-stats">
       <div class="stat-tile">
         <span class="stat-label">Expenses Logged</span>
