@@ -1,6 +1,8 @@
 import re
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, session, abort
+import calendar
+from datetime import date, datetime
+from flask import Flask, render_template, request, redirect, url_for, session, abort, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import (
     get_db, init_db, seed_db,
@@ -13,6 +15,24 @@ from database import queries
 
 app = Flask(__name__)
 app.secret_key = 'spendly-dev-secret-key'
+
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%d")
+        return parsed.strftime("%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def _months_ago(base, months):
+    month_index = base.month - 1 - months
+    year = base.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(base.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
 
 
 # ------------------------------------------------------------------ #
@@ -125,15 +145,56 @@ def profile():
     user = queries.get_user_by_id(session["user_id"])
     if user is None:
         abort(404)
-    summary = queries.get_summary_stats(session["user_id"])
-    transactions = queries.get_recent_transactions(session["user_id"])
-    breakdown = queries.get_category_breakdown(session["user_id"])
+
+    today = date.today()
+    this_month_start = today.replace(day=1)
+    this_month_end = date(today.year, today.month,
+                           calendar.monthrange(today.year, today.month)[1])
+    last_3_start = _months_ago(today, 3)
+    last_6_start = _months_ago(today, 6)
+
+    parsed_from = _parse_date(request.args.get("date_from"))
+    parsed_to = _parse_date(request.args.get("date_to"))
+
+    date_from = date_to = None
+    display_from = display_to = None
+
+    if parsed_from and parsed_to:
+        display_from, display_to = parsed_from, parsed_to
+        if parsed_from > parsed_to:
+            flash("Start date must be before end date.")
+        else:
+            date_from, date_to = parsed_from, parsed_to
+    # else: partial or malformed params -> stay None, silent fallback
+
+    active_preset = "all_time"
+    if date_from == this_month_start.isoformat() and date_to == this_month_end.isoformat():
+        active_preset = "this_month"
+    elif date_from == last_3_start.isoformat() and date_to == today.isoformat():
+        active_preset = "last_3_months"
+    elif date_from == last_6_start.isoformat() and date_to == today.isoformat():
+        active_preset = "last_6_months"
+    elif date_from and date_to:
+        active_preset = "custom"
+
+    summary = queries.get_summary_stats(session["user_id"], date_from, date_to)
+    transactions = queries.get_recent_transactions(session["user_id"], date_from=date_from, date_to=date_to)
+    breakdown = queries.get_category_breakdown(session["user_id"], date_from, date_to)
+
     return render_template(
         "profile.html",
         user=user,
         summary=summary,
         transactions=transactions,
         breakdown=breakdown,
+        active_preset=active_preset,
+        filter_from=display_from,
+        filter_to=display_to,
+        this_month_start=this_month_start.isoformat(),
+        this_month_end=this_month_end.isoformat(),
+        last_3_start=last_3_start.isoformat(),
+        last_6_start=last_6_start.isoformat(),
+        today=today.isoformat(),
     )
 
 
