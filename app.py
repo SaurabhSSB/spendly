@@ -252,6 +252,13 @@ def delete_expense(id):
     return render_template("delete-expense.html")
 
 
+@app.route("/analytics")
+def analytics():
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+    return render_template("analytics.html")
+
+
 # ------------------------------------------------------------------ #
 # Database initialisation — runs once at startup                      #
 # ------------------------------------------------------------------ #
