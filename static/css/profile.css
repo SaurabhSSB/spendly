@@ -177,6 +177,19 @@
     padding: 1.5rem;
 }
 
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.panel-header .panel-title {
+    margin-bottom: 0;
+}
+
 .panel-title {
     font-family: var(--font-display);
     font-size: 1.1rem;

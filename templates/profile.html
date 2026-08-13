@@ -51,7 +51,10 @@
     </div>
 
     <div class="profile-panel">
-      <h2 class="panel-title">Recent Transactions</h2>
+      <div class="panel-header">
+        <h2 class="panel-title">Recent Transactions</h2>
+        <a href="{{ url_for('add_expense') }}" class="btn-primary">+ Add Expense</a>
+      </div>
       {% if transactions %}
       <table class="transactions-table">
         <thead>
