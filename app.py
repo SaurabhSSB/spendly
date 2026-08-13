@@ -1,6 +1,7 @@
 import re
 import sqlite3
 import calendar
+import math
 from datetime import date, datetime
 from flask import Flask, render_template, request, redirect, url_for, session, abort, flash
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -25,6 +26,9 @@ def _parse_date(value):
         return parsed.strftime("%Y-%m-%d")
     except ValueError:
         return None
+
+
+EXPENSE_CATEGORIES = ["Food", "Transport", "Bills", "Health", "Entertainment", "Shopping", "Other"]
 
 
 def _months_ago(base, months):
@@ -237,9 +241,66 @@ def expenses_categories():
     return render_template("categories.html", breakdown=breakdown)
 
 
-@app.route("/expenses/add")
+@app.route("/expenses/add", methods=["GET", "POST"])
 def add_expense():
-    return render_template("add-expense.html")
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        amount_raw = request.form.get("amount", "").strip()
+        category = request.form.get("category", "").strip()
+        date_str = request.form.get("date", "").strip()
+        description_raw = request.form.get("description", "").strip()
+
+        error = None
+        amount = None
+        parsed_date = None
+
+        if not amount_raw:
+            error = "Amount is required."
+        else:
+            try:
+                amount = float(amount_raw)
+            except ValueError:
+                error = "Amount must be a number."
+            else:
+                if not math.isfinite(amount) or amount <= 0:
+                    error = "Amount must be greater than 0."
+
+        if error is None and category not in EXPENSE_CATEGORIES:
+            error = "Please select a valid category."
+
+        if error is None:
+            parsed_date = _parse_date(date_str)
+            if parsed_date is None:
+                error = "Please enter a valid date."
+
+        if error is None and len(description_raw) > 200:
+            error = "Description must be 200 characters or less."
+
+        if error is not None:
+            return render_template(
+                "add-expense.html",
+                error=error,
+                categories=EXPENSE_CATEGORIES,
+                form_amount=amount_raw,
+                form_category=category,
+                form_date=date_str,
+                form_description=description_raw,
+            )
+
+        description = description_raw or None
+        queries.insert_expense(session["user_id"], amount, category, parsed_date, description)
+        return redirect(url_for("profile"))
+
+    return render_template(
+        "add-expense.html",
+        categories=EXPENSE_CATEGORIES,
+        form_amount="",
+        form_category="",
+        form_date=date.today().strftime("%Y-%m-%d"),
+        form_description="",
+    )
 
 
 @app.route("/expenses/<int:id>/edit")

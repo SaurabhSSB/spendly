@@ -101,3 +101,14 @@ def get_category_breakdown(user_id, date_from=None, date_to=None):
         {"name": row["category"], "amount": row["total"], "pct": pct}
         for row, pct in zip(rows, pcts)
     ]
+
+
+def insert_expense(user_id, amount, category, expense_date, description):
+    db = get_db()
+    db.execute(
+        "INSERT INTO expenses (user_id, amount, category, date, description) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (user_id, amount, category, expense_date, description)
+    )
+    db.commit()
+    db.close()
