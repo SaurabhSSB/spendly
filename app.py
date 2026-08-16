@@ -303,9 +303,70 @@ def add_expense():
     )
 
 
-@app.route("/expenses/<int:id>/edit")
+@app.route("/expenses/<int:id>/edit", methods=["GET", "POST"])
 def edit_expense(id):
-    return render_template("edit-expense.html")
+    if not session.get("user_id"):
+        return redirect(url_for("login"))
+
+    expense = queries.get_expense_by_id(id, session["user_id"])
+    if expense is None:
+        abort(404)
+
+    if request.method == "POST":
+        amount_raw = request.form.get("amount", "").strip()
+        category = request.form.get("category", "").strip()
+        date_str = request.form.get("date", "").strip()
+        description_raw = request.form.get("description", "").strip()
+
+        error = None
+        amount = None
+        parsed_date = None
+
+        if not amount_raw:
+            error = "Amount is required."
+        else:
+            try:
+                amount = float(amount_raw)
+            except ValueError:
+                error = "Amount must be a number."
+            else:
+                if not math.isfinite(amount) or amount <= 0:
+                    error = "Amount must be greater than 0."
+
+        if error is None and category not in EXPENSE_CATEGORIES:
+            error = "Please select a valid category."
+
+        if error is None:
+            parsed_date = _parse_date(date_str)
+            if parsed_date is None:
+                error = "Please enter a valid date."
+
+        if error is None and len(description_raw) > 200:
+            error = "Description must be 200 characters or less."
+
+        if error is not None:
+            return render_template(
+                "edit-expense.html",
+                error=error,
+                categories=EXPENSE_CATEGORIES,
+                expense={
+                    "id": id,
+                    "amount": amount_raw,
+                    "category": category,
+                    "date": date_str,
+                    "description": description_raw,
+                },
+            )
+
+        description = description_raw or None
+        queries.update_expense(id, session["user_id"], amount, category, parsed_date, description)
+        return redirect(url_for("profile"))
+
+    return render_template(
+        "edit-expense.html",
+        categories=EXPENSE_CATEGORIES,
+        expense=expense,
+    )
 
 
 @app.route("/expenses/<int:id>/delete")

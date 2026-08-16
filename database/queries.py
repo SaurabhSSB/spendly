@@ -63,13 +63,14 @@ def get_recent_transactions(user_id, limit=10, date_from=None, date_to=None):
     clause = _date_range_clause(date_from, date_to, params)
     params.append(limit)
     rows = db.execute(
-        "SELECT date, description, category, amount FROM expenses "
+        "SELECT id, date, description, category, amount FROM expenses "
         "WHERE user_id = ?" + clause + " ORDER BY date DESC, id DESC LIMIT ?",
         tuple(params)
     ).fetchall()
     db.close()
     return [
         {
+            "id": row["id"],
             "date": row["date"],
             "description": row["description"],
             "category": row["category"],
@@ -109,6 +110,36 @@ def insert_expense(user_id, amount, category, expense_date, description):
         "INSERT INTO expenses (user_id, amount, category, date, description) "
         "VALUES (?, ?, ?, ?, ?)",
         (user_id, amount, category, expense_date, description)
+    )
+    db.commit()
+    db.close()
+
+
+def get_expense_by_id(expense_id, user_id):
+    db = get_db()
+    row = db.execute(
+        "SELECT id, amount, category, date, description FROM expenses "
+        "WHERE id = ? AND user_id = ?",
+        (expense_id, user_id)
+    ).fetchone()
+    db.close()
+    if row is None:
+        return None
+    return {
+        "id": row["id"],
+        "amount": row["amount"],
+        "category": row["category"],
+        "date": row["date"],
+        "description": row["description"],
+    }
+
+
+def update_expense(expense_id, user_id, amount, category, expense_date, description):
+    db = get_db()
+    db.execute(
+        "UPDATE expenses SET amount = ?, category = ?, date = ?, description = ? "
+        "WHERE id = ? AND user_id = ?",
+        (amount, category, expense_date, description, expense_id, user_id)
     )
     db.commit()
     db.close()

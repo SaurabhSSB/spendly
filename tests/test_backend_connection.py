@@ -61,7 +61,7 @@ def test_get_recent_transactions_with_expenses(app_fixture, seeded_user):
     assert transactions[0]["date"] == "2026-01-02"
     assert transactions[1]["date"] == "2026-01-01"
     for txn in transactions:
-        assert set(txn.keys()) == {"date", "description", "category", "amount"}
+        assert set(txn.keys()) == {"id", "date", "description", "category", "amount"}
 
 
 def test_get_recent_transactions_no_expenses(app_fixture, seeded_user_no_expenses):
