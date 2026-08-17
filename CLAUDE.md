@@ -102,7 +102,7 @@ pytest -s
 | `GET /expenses/categories` | Implemented — renders `categories.html` with category breakdown |
 | `GET /expenses/add` | Stub — Step 7 |
 | `GET /expenses/<id>/edit` | Stub — Step 8 |
-| `GET /expenses/<id>/delete` | Stub — Step 9 |
+| `POST /expenses/<id>/delete` | Implemented — deletes an owned expense from the profile table, redirects to `/profile` |
 
 **Do not implement a stub route unless the active task explicitly targets that step.**
 
